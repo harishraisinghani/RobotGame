@@ -1,16 +1,42 @@
 require_relative 'item'
 require_relative 'robot_already_dead_error'
 require_relative 'unattackable_enemy'
+#require 'pry-byebug'
 
 
 class Robot
+
+  @@count = 0
+  @@robots= []
+
+  class << self
+
+    def reset_count_for_testing
+      @@count = 0
+      @@robots = []
+    end
+
+    def count
+      @@count
+    end
+
+    def in_position(x,y)
+      position_arr = []
+      @@robots.each do |robot|
+        if robot.position[0] == x && robot.position[1] == y
+          position_arr << robot.position
+        end
+      end
+      position_arr
+    end
+  end
 
   include Math
 
   CAPACITY = 250
   DEFAULT_ATTACK_POINTS = 5
 
-  attr_reader :position, :items, :health
+  attr_reader :position, :items, :health, :shield
 
   attr_accessor :equipped_weapon
 
@@ -19,6 +45,9 @@ class Robot
     @items = []
     @health = 100
     @equipped_weapon
+    @shield = 50
+    @@count += 1
+    @@robots << self
   end
 
   def move_left
@@ -56,8 +85,15 @@ class Robot
   end
 
   def wound(points)
-    @health -= points
-    @health = 0 if @health < 0
+    if (@health + @shield - points >=100)
+      @shield -= points
+    elsif (@health + @shield - points >=0)
+      @health -= (points - @shield)
+      @shield = 0
+    else
+      @health = 0
+      @shield = 0
+    end
   end
 
   def heal(points)
@@ -67,6 +103,10 @@ class Robot
 
   def heal!
     raise RobotAlreadyDeadError, "Robot is dead - cannot be revived" if @health <=0
+  end
+
+  def recharge
+    @shield = 50
   end
 
   def attack(enemy)
@@ -82,7 +122,14 @@ class Robot
     end
   end
 
+  def scan
+    Robot.in_position(self.position[0]-1, self.position[1]) + Robot.in_position(self.position[0], self.position[1]+1) + Robot.in_position(self.position[0]+1, self.position[1]) + Robot.in_position(self.position[0], self.position[1]-1)
+    #binding.pry
+  end
+
+
   def attack!(enemy)
     raise UnattackableEnemyError, "Can only attack a robot" if enemy.class != Robot
   end
 end
+
